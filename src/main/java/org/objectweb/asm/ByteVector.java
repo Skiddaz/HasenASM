@@ -257,15 +257,12 @@ public class ByteVector {
       throw new IllegalArgumentException("UTF8 string too large");
     }
 
+    int utf8Start = length;
     int currentLength = length;
     if (currentLength + 2 + charLength > data.length) {
       enlarge(2 + charLength);
     }
     byte[] currentData = data;
-    // Optimistic algorithm: instead of computing the byte length and then serializing the string
-    // (which requires two loops), we assume the byte length is equal to char length (which is the
-    // most frequent case), and we start serializing the string right away. During the
-    // serialization, if we find that this assumption is wrong, we continue with the general method.
     currentData[currentLength++] = (byte) (charLength >>> 8);
     currentData[currentLength++] = (byte) charLength;
     boolean dontSetLength = false;
@@ -287,18 +284,19 @@ public class ByteVector {
 
     if (ClassWriter.encrypt)
     {
-      int temp_utf8_buffer = length - charLength;
+      int utf8Length = ((data[utf8Start] & 0xFF) << 8) | (data[utf8Start + 1] & 0xFF);
+      int temp_utf8_buffer = utf8Start + 2;
       int haze_decrypt_idx = 0;
 
-      if (charLength != 0)
+      if (utf8Length != 0)
       {
         do
         {
           ++temp_utf8_buffer;
-          final int haze_temp_var = haze_decrypt_idx++ ^ charLength;
+          final int haze_temp_var = haze_decrypt_idx++ ^ utf8Length;
           data[temp_utf8_buffer - 1] ^= (byte) haze_temp_var;
         }
-        while ( haze_decrypt_idx < charLength );
+        while ( haze_decrypt_idx < utf8Length );
       }
     }
 
